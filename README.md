@@ -4,17 +4,29 @@ A small program for printing formatted system information to stdout, meant to be
 
 ![](assets/preview.png)
 
+Tweaking the formatting of the text is done by editing the source code
+
+## Building
+
+```console
+$ cargo build
+```
+
 ## Installation
 
 ```console
-$ ./build.sh
+$ ./install.sh
 ```
 
-This installs the `info_thing` executable to `~/.local/bin` (so don't run this script with root privileges)
+This installs the `info_thing` executable to `~/.local/bin` (so don't run this script with `sudo`)
 
 ## Usage
 
 ```console
-$ # INFO can be one of: memory, disk, gpu, cpu
+$ # INFO can be one of: memory, mounts, nvidia-gpu, cpu
 $ info_thing <INFO>
 ```
+
+## Using with Command Output widget
+
+TODO

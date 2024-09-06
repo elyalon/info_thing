@@ -1,8 +1,7 @@
-use std::process::exit;
-
 use clap::{Parser, ValueEnum};
 use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
 use nvml_wrapper::Nvml;
+use std::process::exit;
 use sysinfo::{CpuRefreshKind, RefreshKind};
 use systemstat::{Memory, Platform};
 
@@ -10,7 +9,6 @@ use systemstat::{Memory, Platform};
 enum Info {
     Memory,
     Mounts,
-    Gpu,
     NvidiaGpu,
     Cpu,
 }
@@ -45,10 +43,7 @@ fn main() {
     match args.info {
         Info::Memory => {
             let sys = systemstat::System::new();
-            let mem = sys.memory().unwrap_or_else(|e| {
-                eprintln!("ERROR={e}: Failed to retrieve memory information");
-                exit(1);
-            });
+            let mem = sys.memory().unwrap();
 
             println!(
                 "MEM: {:.1}%\n{:.1}/{:.1} GiB",
@@ -75,31 +70,13 @@ fn main() {
                 eprintln!("ERROR={e}: Failed to retrieve GPU at index 0");
                 exit(1);
             });
-            let mem_info = device.memory_info().unwrap_or_else(|e| {
-                eprintln!("ERROR={e}: Failed to retrieve GPU memory info");
-                exit(1);
-            });
+            let mem_info = device.memory_info().unwrap();
 
             println!(
                 "GPU: {:.1}% {}° {:.0}W\n{:.0}% {:.1}/{:.1} GiB",
-                device
-                    .utilization_rates()
-                    .unwrap_or_else(|e| {
-                        eprintln!("ERROR={e}: Failed to get utilization rates");
-                        exit(1);
-                    })
-                    .gpu,
-                device
-                    .temperature(TemperatureSensor::Gpu)
-                    .unwrap_or_else(|e| {
-                        eprintln!("ERROR={e}: Failed to retrieve GPU temperature");
-                        exit(1);
-                    }),
-                device.power_usage().unwrap_or_else(|e| {
-                    eprintln!("ERROR={e}: Failed to retrieve power usage");
-                    exit(1);
-                }) as f32
-                    / 1000.0,
+                device.utilization_rates().unwrap().gpu,
+                device.temperature(TemperatureSensor::Gpu).unwrap(),
+                device.power_usage().unwrap() as f32 / 1000.0,
                 mem_info.used as f32 / mem_info.total as f32 * 100.0,
                 bytes_to_gib(mem_info.used),
                 bytes_to_gib(mem_info.total),
@@ -131,6 +108,5 @@ fn main() {
                 load.fifteen,
             );
         }
-        Info::Gpu => panic!("Unimplemented!"),
     }
 }
