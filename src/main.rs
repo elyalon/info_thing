@@ -1,23 +1,27 @@
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand};
 use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
 use nvml_wrapper::Nvml;
 use std::process::exit;
 use sysinfo::{CpuRefreshKind, RefreshKind};
 use systemstat::{Memory, Platform};
 
-#[derive(ValueEnum, Clone, Debug)]
-enum Info {
+#[derive(Subcommand, Debug)]
+enum Command {
     Memory,
-    Mounts,
+    Mounts {
+        #[arg(required = true)]
+        paths: Vec<String>,
+    },
     NvidiaGpu,
     Cpu,
 }
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(author, version, about, long_about = None)]
+#[command(propagate_version = true)]
 struct Args {
-    #[arg(value_enum)]
-    info: Info,
+    #[command(subcommand)]
+    command: Command,
 }
 
 fn mount_usage(sys: &systemstat::System, mount_path: &str) -> f32 {
@@ -40,8 +44,8 @@ fn bytes_to_gib(bytes: u64) -> f32 {
 fn main() {
     let args = Args::parse();
 
-    match args.info {
-        Info::Memory => {
+    match args.command {
+        Command::Memory => {
             let sys = systemstat::System::new();
             let mem = sys.memory().unwrap();
 
@@ -52,16 +56,14 @@ fn main() {
                 bytes_to_gib(mem.total.as_u64()),
             );
         }
-        Info::Mounts => {
+        Command::Mounts { paths } => {
             let sys = systemstat::System::new();
 
-            println!(
-                "/={:.1}%\n/home={:.1}%",
-                mount_usage(&sys, "/"),
-                mount_usage(&sys, "/home"),
-            );
+            for path in paths {
+                println!("{path}={:.1}%", mount_usage(&sys, &path));
+            }
         }
-        Info::NvidiaGpu => {
+        Command::NvidiaGpu => {
             let nvml = Nvml::init().unwrap_or_else(|e| {
                 eprintln!("ERROR={e}: NVML failed to initialize");
                 exit(1);
@@ -82,7 +84,7 @@ fn main() {
                 bytes_to_gib(mem_info.total),
             );
         }
-        Info::Cpu => {
+        Command::Cpu => {
             let mut sys = sysinfo::System::new_with_specifics(
                 RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
             );
